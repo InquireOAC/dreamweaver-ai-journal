@@ -1,58 +1,16 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
 import { Book } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DreamAnalysisProps {
   dreamContent: string;
   existingAnalysis?: string;
   onAnalysisComplete: (analysis: string) => void;
 }
-
-// This is a mock function - in a production app, this would call an actual AI service API
-const mockAnalyzeDream = async (content: string): Promise<string> => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 1500));
-  
-  // Generate mock analysis based on keywords in the dream content
-  const analysis = [];
-  
-  if (content.toLowerCase().includes("fall")) {
-    analysis.push("Dreams about falling often represent insecurities, anxiety, or feeling out of control in your life.");
-  }
-  
-  if (content.toLowerCase().includes("fly")) {
-    analysis.push("Flying dreams typically symbolize freedom, possibility, and overcoming obstacles.");
-  }
-  
-  if (content.toLowerCase().includes("water") || content.toLowerCase().includes("ocean") || content.toLowerCase().includes("swim")) {
-    analysis.push("Water in dreams often represents your emotional state or unconscious mind. Calm water may indicate peace, while turbulent water might reflect emotional turmoil.");
-  }
-  
-  if (content.toLowerCase().includes("chase") || content.toLowerCase().includes("running")) {
-    analysis.push("Being chased in dreams often symbolizes avoiding a situation or person in waking life.");
-  }
-  
-  if (content.toLowerCase().includes("house") || content.toLowerCase().includes("home")) {
-    analysis.push("Houses or homes in dreams typically represent your sense of self, with different rooms reflecting different aspects of your personality or life.");
-  }
-  
-  // Default analysis if no keywords match
-  if (analysis.length === 0) {
-    analysis.push("Your dream contains personal symbols that may relate to your current life circumstances.");
-    analysis.push("Consider how the emotions in this dream mirror feelings you've experienced recently.");
-    analysis.push("The characters in your dream may represent aspects of yourself or people who have been on your mind.");
-  } else {
-    // Add some general analysis
-    analysis.push("Remember that dream interpretation is highly personal - your own associations with these symbols may differ from traditional interpretations.");
-    analysis.push("Consider journaling about how these dream elements might connect to your waking life.");
-  }
-  
-  return analysis.join("\n\n");
-};
 
 const DreamAnalysis = ({
   dreamContent,
@@ -65,9 +23,14 @@ const DreamAnalysis = ({
   const handleAnalyze = async () => {
     setLoading(true);
     try {
-      const result = await mockAnalyzeDream(dreamContent);
-      setAnalysis(result);
-      onAnalysisComplete(result);
+      const { data, error } = await supabase.functions.invoke('analyze-dream', {
+        body: { dreamContent }
+      });
+
+      if (error) throw error;
+
+      setAnalysis(data.analysis);
+      onAnalysisComplete(data.analysis);
       toast.success("Dream analysis complete!");
     } catch (error) {
       console.error("Error analyzing dream:", error);

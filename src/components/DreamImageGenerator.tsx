@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
 import { Pencil } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DreamImageGeneratorProps {
   dreamContent: string;
@@ -13,16 +14,6 @@ interface DreamImageGeneratorProps {
   existingImage?: string;
   onImageGenerated: (imageUrl: string, prompt: string) => void;
 }
-
-// This is a mock function - in a production app, this would call an actual AI service API
-const mockGenerateImage = async (prompt: string): Promise<string> => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 2000));
-  
-  // Return a placeholder image URL
-  // In a real implementation, this would be the URL returned by the AI image generation service
-  return `https://picsum.photos/seed/${Math.random().toString(36).substring(7)}/800/600`;
-};
 
 const DreamImageGenerator = ({
   dreamContent,
@@ -34,17 +25,25 @@ const DreamImageGenerator = ({
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | undefined>(existingImage);
 
-  const handleSuggestPrompt = () => {
-    // Extract keywords from dream content to create a prompt
-    const keywords = dreamContent
-      .split(/\s+/)
-      .filter(word => word.length > 4)
-      .slice(0, 8)
-      .join(" ");
-    
-    const suggestedPrompt = `Dreamlike scene with ${keywords}, ethereal lighting, soft focus, fantasy art`;
-    setPrompt(suggestedPrompt);
-    toast.info("Prompt suggestion created!");
+  const handleSuggestPrompt = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-dream', {
+        body: { 
+          dreamContent,
+          task: 'create_image_prompt'
+        }
+      });
+
+      if (error) throw error;
+      setPrompt(data.analysis);
+      toast.success("Prompt suggestion created!");
+    } catch (error) {
+      console.error("Error suggesting prompt:", error);
+      toast.error("Failed to suggest prompt. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGenerateImage = async () => {
@@ -55,9 +54,14 @@ const DreamImageGenerator = ({
 
     setLoading(true);
     try {
-      const result = await mockGenerateImage(prompt);
-      setImageUrl(result);
-      onImageGenerated(result, prompt);
+      const { data, error } = await supabase.functions.invoke('generate-dream-image', {
+        body: { prompt }
+      });
+
+      if (error) throw error;
+      
+      setImageUrl(data.imageUrl);
+      onImageGenerated(data.imageUrl, prompt);
       toast.success("Dream image generated!");
     } catch (error) {
       console.error("Error generating image:", error);
