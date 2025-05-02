@@ -25,3 +25,10 @@ export type DreamStore = {
   entries: DreamEntry[];
   tags: DreamTag[];
 };
+
+export type SocialLinks = {
+  twitter?: string;
+  instagram?: string;
+  facebook?: string;
+  website?: string;
+};

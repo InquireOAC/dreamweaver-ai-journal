@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,12 +15,39 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 
+const inspirationalDreamQuotes = [
+  "Dreams are illustrations from the book your soul is writing about you.",
+  "Dreams are the touchstones of our character.",
+  "All that we see or seem is but a dream within a dream.",
+  "Dreams are today's answers to tomorrow's questions.",
+  "The future belongs to those who believe in the beauty of their dreams.",
+  "A dream you dream alone is only a dream. A dream you dream together is reality.",
+  "All our dreams can come true, if we have the courage to pursue them.",
+  "Dreams are the seedlings of realities.",
+  "The best way to make your dreams come true is to wake up.",
+  "Within your dreams lies a world of infinite possibilities.",
+  "Dreams reflect the soul's deepest desires and fears.",
+  "When you cease to dream, you cease to live.",
+  "Dream big and dare to fail.",
+  "In dreams, we enter a world that is entirely our own.",
+  "Your dreams are the whispers of your soul."
+];
+
 const Journal = () => {
   const { entries, tags, addEntry, updateEntry, deleteEntry } = useDreamStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAddingDream, setIsAddingDream] = useState(false);
   const [selectedDream, setSelectedDream] = useState<DreamEntry | null>(null);
+  const [dailyQuote, setDailyQuote] = useState("");
   const { user } = useAuth();
+  
+  // Set daily quote based on the date
+  useEffect(() => {
+    const today = new Date();
+    const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
+    const quoteIndex = dayOfYear % inspirationalDreamQuotes.length;
+    setDailyQuote(inspirationalDreamQuotes[quoteIndex]);
+  }, []);
   
   // When the user is logged in, sync their dreams from the database
   useEffect(() => {
@@ -53,7 +81,9 @@ const Journal = () => {
           imagePrompt: dream.imagePrompt,
           generatedImage: dream.generatedImage,
           analysis: dream.analysis,
-          isPublic: dream.is_public || false
+          isPublic: dream.is_public || false,
+          likeCount: dream.like_count || 0,
+          commentCount: dream.comment_count || 0
         }));
         
         // We'll sync them if the local store doesn't have them yet
@@ -172,7 +202,7 @@ const Journal = () => {
       <header className="mb-6">
         <h1 className="text-3xl md:text-4xl font-bold gradient-text flex items-center gap-2">
           <Moon className="animate-float" />
-          DreamWeaver
+          <span className="italic">{dailyQuote}</span>
         </h1>
         <p className="text-muted-foreground">
           Record and analyze your dreams with the help of AI

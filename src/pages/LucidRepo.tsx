@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import {
   Heart, MessageSquare, Share2, Moon, User, UserPlus, ChevronDown
 } from "lucide-react";
@@ -25,6 +25,7 @@ const LucidRepo = () => {
   const [userProfiles, setUserProfiles] = useState<{[key: string]: any}>({});
   const [activeDream, setActiveDream] = useState<string | null>(null);
   const [activeComments, setActiveComments] = useState<string | null>(null);
+  const [userLikes, setUserLikes] = useState<string[]>([]);
   
   useEffect(() => {
     if (!user) {
@@ -33,7 +34,28 @@ const LucidRepo = () => {
     }
     
     fetchDreams();
+    fetchUserLikes();
   }, [user, feedType]);
+  
+  const fetchUserLikes = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from("dream_likes")
+        .select("dream_id")
+        .eq("user_id", user.id);
+      
+      if (error) throw error;
+      
+      if (data) {
+        const likedDreamIds = data.map(like => like.dream_id);
+        setUserLikes(likedDreamIds);
+      }
+    } catch (error) {
+      console.error("Error fetching user likes:", error);
+    }
+  };
   
   const fetchDreams = async () => {
     setLoading(true);
@@ -66,12 +88,19 @@ const LucidRepo = () => {
       
       if (error) throw error;
       
-      setDreams(data || []);
-      
-      // Fetch user profiles for these dreams
       if (data && data.length > 0) {
+        // Update dreams with liked status
+        const updatedDreams = data.map(dream => ({
+          ...dream,
+          liked: userLikes.includes(dream.id)
+        }));
+        setDreams(updatedDreams);
+        
+        // Fetch user profiles for these dreams
         const userIds = [...new Set(data.map(d => d.user_id))];
         fetchUserProfiles(userIds);
+      } else {
+        setDreams([]);
       }
     } catch (error) {
       console.error("Error fetching dreams:", error);
@@ -110,14 +139,9 @@ const LucidRepo = () => {
     
     try {
       // Check if already liked
-      const { data: existingLike } = await supabase
-        .from("dream_likes")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("dream_id", dreamId)
-        .single();
+      const isLiked = userLikes.includes(dreamId);
       
-      if (existingLike) {
+      if (isLiked) {
         // Unlike
         await supabase
           .from("dream_likes")
@@ -130,6 +154,9 @@ const LucidRepo = () => {
           .from("dream_entries")
           .update({ like_count: Math.max((dreams.find(d => d.id === dreamId)?.like_count || 1) - 1, 0) })
           .eq("id", dreamId);
+          
+        // Update local state
+        setUserLikes(userLikes.filter(id => id !== dreamId));
       } else {
         // Like
         await supabase
@@ -141,14 +168,18 @@ const LucidRepo = () => {
           .from("dream_entries")
           .update({ like_count: (dreams.find(d => d.id === dreamId)?.like_count || 0) + 1 })
           .eq("id", dreamId);
+          
+        // Update local state
+        setUserLikes([...userLikes, dreamId]);
       }
       
-      // Update local state
+      // Update dreams list with new like status
       setDreams(dreams.map(dream => {
         if (dream.id === dreamId) {
           return {
             ...dream,
-            like_count: existingLike 
+            liked: !isLiked,
+            like_count: isLiked 
               ? Math.max((dream.like_count || 1) - 1, 0)
               : (dream.like_count || 0) + 1
           };
@@ -222,6 +253,15 @@ const LucidRepo = () => {
     }
   };
   
+  const navigateToProfile = (userId: string) => {
+    if (userId === user?.id) {
+      navigate("/profile");
+    } else {
+      // For viewing other users' profiles
+      navigate(`/profile/${userId}`);
+    }
+  };
+  
   if (!user) {
     return null; // Redirect happens above
   }
@@ -282,7 +322,10 @@ const LucidRepo = () => {
                   className="overflow-hidden shadow-md"
                 >
                   <div className="p-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                    <div 
+                      className="flex items-center gap-2 cursor-pointer"
+                      onClick={() => dreamUser && navigateToProfile(dreamUser.id)}
+                    >
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={dreamUser?.avatar_url} />
                         <AvatarFallback className="bg-dream-purple/20">
@@ -380,7 +423,7 @@ const LucidRepo = () => {
                         >
                           <Heart 
                             size={18} 
-                            className={dream.liked ? "fill-red-500 text-red-500" : ""} 
+                            className={dream.liked || userLikes.includes(dream.id) ? "fill-red-500 text-red-500" : ""} 
                           />
                           <span className="text-xs">{dream.like_count || 0}</span>
                         </Button>

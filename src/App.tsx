@@ -28,6 +28,7 @@ const App = () => (
               <Route index element={<Journal />} />
               <Route path="/lucidrepo" element={<LucidRepo />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/profile/:userId" element={<Profile />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

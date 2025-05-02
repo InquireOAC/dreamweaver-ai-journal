@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { 
   User, LogOut, Settings, Edit, MessageSquare, 
-  Heart, UserPlus, Moon, Camera
+  Heart, UserPlus, Moon, Camera, Link as LinkIcon, Globe, Twitter, Instagram, Facebook
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,25 +21,41 @@ import { toast } from "sonner";
 import { useNavigate, Link } from "react-router-dom";
 
 const Profile = () => {
+  const { userId } = useParams<{ userId: string }>();
   const { user, profile, signOut, refreshProfile } = useAuth();
   const navigate = useNavigate();
+  
+  const [isOwnProfile, setIsOwnProfile] = useState(true);
+  const [viewedProfile, setViewedProfile] = useState<any>(null);
+  const [isFollowing, setIsFollowing] = useState(false);
   
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMessagesOpen, setIsMessagesOpen] = useState(false);
+  const [isSocialLinksOpen, setIsSocialLinksOpen] = useState(false);
   
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   
+  const [socialLinks, setSocialLinks] = useState({
+    twitter: "",
+    instagram: "",
+    facebook: "",
+    website: ""
+  });
+  
   const [dreamCount, setDreamCount] = useState(0);
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   
-  const [publicDreams, setPublicDreams] = useState([]);
+  const [publicDreams, setPublicDreams] = useState<any[]>([]);
+  const [likedDreams, setLikedDreams] = useState<any[]>([]);
   const [conversations, setConversations] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
+  
+  const profileToShow = isOwnProfile ? profile : viewedProfile;
   
   useEffect(() => {
     if (!user) {
@@ -46,37 +63,132 @@ const Profile = () => {
       return;
     }
     
-    if (profile) {
-      setDisplayName(profile.display_name || "");
-      setUsername(profile.username || "");
-      setBio(profile.bio || "");
-      setAvatarUrl(profile.avatar_url || "");
-      
-      fetchUserStats();
-      fetchPublicDreams();
+    // Determine if viewing own profile or someone else's
+    if (userId && userId !== user.id) {
+      setIsOwnProfile(false);
+      fetchUserProfile(userId);
+      checkIfFollowing(userId);
+    } else {
+      setIsOwnProfile(true);
+      if (profile) {
+        setDisplayName(profile.display_name || "");
+        setUsername(profile.username || "");
+        setBio(profile.bio || "");
+        setAvatarUrl(profile.avatar_url || "");
+        
+        // Parse social links from profile
+        if (profile.social_links) {
+          setSocialLinks({
+            twitter: profile.social_links.twitter || "",
+            instagram: profile.social_links.instagram || "",
+            facebook: profile.social_links.facebook || "",
+            website: profile.social_links.website || ""
+          });
+        }
+      }
+    }
+    
+    fetchUserStats();
+    fetchPublicDreams();
+    fetchLikedDreams();
+    
+    if (isOwnProfile) {
       fetchConversations();
     }
-  }, [user, profile, navigate]);
+  }, [user, profile, userId]);
+  
+  const fetchUserProfile = async (id: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", id)
+        .single();
+      
+      if (error) throw error;
+      
+      setViewedProfile(data);
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      toast.error("Could not load user profile");
+      navigate("/");
+    }
+  };
+  
+  const checkIfFollowing = async (targetUserId: string) => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from("followers")
+        .select("*")
+        .eq("follower_id", user.id)
+        .eq("following_id", targetUserId)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "No rows returned" error
+        throw error;
+      }
+      
+      setIsFollowing(!!data);
+    } catch (error) {
+      console.error("Error checking follow status:", error);
+    }
+  };
+  
+  const handleFollow = async () => {
+    if (!user || isOwnProfile) return;
+    
+    try {
+      if (isFollowing) {
+        // Unfollow
+        await supabase
+          .from("followers")
+          .delete()
+          .eq("follower_id", user.id)
+          .eq("following_id", userId);
+        
+        setIsFollowing(false);
+        setFollowersCount(prev => Math.max(0, prev - 1));
+        toast.success("Unfollowed user");
+      } else {
+        // Follow
+        await supabase
+          .from("followers")
+          .insert({ follower_id: user.id, following_id: userId });
+        
+        setIsFollowing(true);
+        setFollowersCount(prev => prev + 1);
+        toast.success("Now following user");
+      }
+    } catch (error) {
+      console.error("Error updating follow status:", error);
+      toast.error("Failed to update follow");
+    }
+  };
   
   const fetchUserStats = async () => {
     if (!user) return;
+    
+    const targetUserId = userId || user.id;
     
     try {
       // Get dream count
       const { data: dreams, error: dreamsError } = await supabase
         .from("dream_entries")
-        .select("count")
-        .eq("user_id", user.id);
+        .select("id")
+        .eq("user_id", targetUserId)
+        .eq("is_public", true);
       
       if (!dreamsError) {
-        setDreamCount(dreams[0]?.count || 0);
+        setDreamCount(dreams?.length || 0);
       }
       
       // Get followers count
       const { count: followers, error: followersError } = await supabase
         .from("followers")
-        .select("*", { count: "exact" })
-        .eq("following_id", user.id);
+        .select("*", { count: "exact", head: true })
+        .eq("following_id", targetUserId);
       
       if (!followersError) {
         setFollowersCount(followers || 0);
@@ -85,8 +197,8 @@ const Profile = () => {
       // Get following count
       const { count: following, error: followingError } = await supabase
         .from("followers")
-        .select("*", { count: "exact" })
-        .eq("follower_id", user.id);
+        .select("*", { count: "exact", head: true })
+        .eq("follower_id", targetUserId);
       
       if (!followingError) {
         setFollowingCount(following || 0);
@@ -99,11 +211,13 @@ const Profile = () => {
   const fetchPublicDreams = async () => {
     if (!user) return;
     
+    const targetUserId = userId || user.id;
+    
     try {
       const { data, error } = await supabase
         .from("dream_entries")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", targetUserId)
         .eq("is_public", true)
         .order("created_at", { ascending: false });
       
@@ -112,6 +226,43 @@ const Profile = () => {
       setPublicDreams(data || []);
     } catch (error) {
       console.error("Error fetching public dreams:", error);
+    }
+  };
+  
+  const fetchLikedDreams = async () => {
+    if (!user) return;
+    
+    try {
+      // For viewing own profile or someone else's
+      const targetUserId = userId || user.id;
+      
+      // First get the liked dream IDs
+      const { data: likedData, error: likedError } = await supabase
+        .from("dream_likes")
+        .select("dream_id")
+        .eq("user_id", targetUserId);
+      
+      if (likedError) throw likedError;
+      
+      if (likedData && likedData.length > 0) {
+        const dreamIds = likedData.map(item => item.dream_id);
+        
+        // Then fetch the actual dreams
+        const { data: dreamData, error: dreamError } = await supabase
+          .from("dream_entries")
+          .select("*, profiles:user_id(username, display_name, avatar_url)")
+          .in("id", dreamIds)
+          .eq("is_public", true)
+          .order("created_at", { ascending: false });
+        
+        if (dreamError) throw dreamError;
+        
+        setLikedDreams(dreamData || []);
+      } else {
+        setLikedDreams([]);
+      }
+    } catch (error) {
+      console.error("Error fetching liked dreams:", error);
     }
   };
   
@@ -136,8 +287,8 @@ const Profile = () => {
       
       // Combine and get unique user IDs
       const userIds = new Set([
-        ...(sent || []).map((msg) => msg.receiver_id),
-        ...(received || []).map((msg) => msg.sender_id)
+        ...(sent || []).map((msg: any) => msg.receiver_id),
+        ...(received || []).map((msg: any) => msg.sender_id)
       ]);
       
       if (userIds.size > 0) {
@@ -181,6 +332,28 @@ const Profile = () => {
     }
   };
   
+  const handleUpdateSocialLinks = async () => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          social_links: socialLinks,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", user.id);
+      
+      if (error) throw error;
+      
+      await refreshProfile();
+      toast.success("Social links updated successfully!");
+      setIsSocialLinksOpen(false);
+    } catch (error: any) {
+      toast.error(error.message || "Error updating social links");
+    }
+  };
+  
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
@@ -203,6 +376,13 @@ const Profile = () => {
     }
   };
   
+  const handleStartConversation = () => {
+    // Navigate to messages with this user
+    if (userId) {
+      navigate(`/messages/${userId}`);
+    }
+  };
+  
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -212,12 +392,26 @@ const Profile = () => {
     }
   };
   
-  if (!user || !profile) {
+  if (!user) {
     return (
       <div className="min-h-screen dream-background flex items-center justify-center">
         <div className="text-center">
           <Moon size={48} className="mx-auto animate-pulse text-dream-purple" />
           <p className="mt-4">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!isOwnProfile && !viewedProfile) {
+    return (
+      <div className="min-h-screen dream-background flex items-center justify-center">
+        <div className="text-center">
+          <User size={48} className="mx-auto mb-4 text-muted-foreground" />
+          <h3 className="text-xl font-medium mb-2">User not found</h3>
+          <Button variant="outline" onClick={() => navigate("/")}>
+            Go back home
+          </Button>
         </div>
       </div>
     );
@@ -229,28 +423,90 @@ const Profile = () => {
         <div className="flex flex-col items-center mb-6 pt-4">
           <div className="relative">
             <Avatar className="w-24 h-24 border-4 border-dream-lavender">
-              <AvatarImage src={profile.avatar_url} />
+              <AvatarImage src={profileToShow?.avatar_url} />
               <AvatarFallback className="bg-dream-purple/20 text-dream-purple">
-                {profile.username ? profile.username[0].toUpperCase() : "U"}
+                {profileToShow?.username ? profileToShow.username[0].toUpperCase() : "U"}
               </AvatarFallback>
             </Avatar>
-            <Button 
-              size="icon" 
-              variant="outline" 
-              className="absolute bottom-0 right-0 rounded-full bg-white shadow-md p-1 h-8 w-8"
-              onClick={() => setIsEditProfileOpen(true)}
-            >
-              <Edit size={14} />
-            </Button>
+            {isOwnProfile && (
+              <Button 
+                size="icon" 
+                variant="outline" 
+                className="absolute bottom-0 right-0 rounded-full bg-white shadow-md p-1 h-8 w-8"
+                onClick={() => setIsEditProfileOpen(true)}
+              >
+                <Edit size={14} />
+              </Button>
+            )}
           </div>
           
           <h1 className="text-xl font-bold mt-3">
-            {profile.display_name || profile.username || "New Dreamer"}
+            {profileToShow?.display_name || profileToShow?.username || "New Dreamer"}
           </h1>
-          <p className="text-sm text-muted-foreground">@{profile.username || "username"}</p>
+          <p className="text-sm text-muted-foreground">@{profileToShow?.username || "username"}</p>
           
-          {profile.bio && (
-            <p className="text-sm text-center mt-2 max-w-md">{profile.bio}</p>
+          {profileToShow?.bio && (
+            <p className="text-sm text-center mt-2 max-w-md">{profileToShow.bio}</p>
+          )}
+          
+          {/* Social Links */}
+          {profileToShow?.social_links && (
+            <div className="flex items-center gap-2 mt-2">
+              {profileToShow.social_links.twitter && (
+                <a 
+                  href={`https://twitter.com/${profileToShow.social_links.twitter}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-500"
+                >
+                  <Twitter size={16} />
+                </a>
+              )}
+              
+              {profileToShow.social_links.instagram && (
+                <a 
+                  href={`https://instagram.com/${profileToShow.social_links.instagram}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-pink-500 hover:text-pink-600"
+                >
+                  <Instagram size={16} />
+                </a>
+              )}
+              
+              {profileToShow.social_links.facebook && (
+                <a 
+                  href={`https://facebook.com/${profileToShow.social_links.facebook}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-700"
+                >
+                  <Facebook size={16} />
+                </a>
+              )}
+              
+              {profileToShow.social_links.website && (
+                <a 
+                  href={profileToShow.social_links.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-600 hover:text-gray-800"
+                >
+                  <Globe size={16} />
+                </a>
+              )}
+              
+              {isOwnProfile && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setIsSocialLinksOpen(true)}
+                  className="h-6 text-xs px-2 ml-1"
+                >
+                  <Edit size={10} className="mr-1" /> Edit
+                </Button>
+              )}
+            </div>
           )}
           
           <div className="flex items-center justify-center gap-4 mt-4">
@@ -269,28 +525,51 @@ const Profile = () => {
           </div>
           
           <div className="flex gap-2 mt-4">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setIsMessagesOpen(true)}
-              className="flex items-center gap-1 text-sm"
-            >
-              <MessageSquare size={14} /> Messages
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setIsSettingsOpen(true)}
-              className="flex items-center gap-1 text-sm"
-            >
-              <Settings size={14} /> Settings
-            </Button>
+            {isOwnProfile ? (
+              <>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setIsMessagesOpen(true)}
+                  className="flex items-center gap-1 text-sm"
+                >
+                  <MessageSquare size={14} /> Messages
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="flex items-center gap-1 text-sm"
+                >
+                  <Settings size={14} /> Settings
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button 
+                  variant={isFollowing ? "outline" : "default"}
+                  size="sm"
+                  onClick={handleFollow}
+                  className="flex items-center gap-1 text-sm"
+                >
+                  <UserPlus size={14} /> {isFollowing ? "Unfollow" : "Follow"}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleStartConversation}
+                  className="flex items-center gap-1 text-sm"
+                >
+                  <MessageSquare size={14} /> Message
+                </Button>
+              </>
+            )}
           </div>
         </div>
         
         <Tabs defaultValue="dreams" className="mt-6">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="dreams">My Dreams</TabsTrigger>
+            <TabsTrigger value="dreams">Dreams</TabsTrigger>
             <TabsTrigger value="likes">Liked Dreams</TabsTrigger>
           </TabsList>
           
@@ -332,26 +611,73 @@ const Profile = () => {
                 <Moon size={32} className="mx-auto mb-2 text-muted-foreground" />
                 <h3 className="text-lg font-medium mb-1">No public dreams yet</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Share your dreams to the Lucid Repo to see them here
+                  {isOwnProfile ? 
+                    "Share your dreams to the Lucid Repo to see them here" : 
+                    "This user hasn't shared any dreams yet"}
                 </p>
-                <Link to="/">
-                  <Button variant="outline">Go to Journal</Button>
-                </Link>
+                {isOwnProfile && (
+                  <Link to="/">
+                    <Button variant="outline">Go to Journal</Button>
+                  </Link>
+                )}
               </div>
             )}
           </TabsContent>
           
           <TabsContent value="likes" className="mt-4">
-            <div className="text-center py-12">
-              <Heart size={32} className="mx-auto mb-2 text-muted-foreground" />
-              <h3 className="text-lg font-medium mb-1">No liked dreams yet</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Explore the Lucid Repo to discover and like dreams
-              </p>
-              <Link to="/lucidrepo">
-                <Button variant="outline">Explore Dreams</Button>
-              </Link>
-            </div>
+            {likedDreams.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {likedDreams.map((dream: any) => (
+                  <Card key={dream.id} className="overflow-hidden cursor-pointer hover:shadow-md transition-all">
+                    <CardContent className="p-0">
+                      {dream.generatedImage ? (
+                        <img 
+                          src={dream.generatedImage} 
+                          alt={dream.title}
+                          className="aspect-square object-cover w-full"
+                        />
+                      ) : (
+                        <div className="aspect-square flex items-center justify-center bg-dream-purple/10">
+                          <Moon size={32} className="text-dream-purple opacity-50" />
+                        </div>
+                      )}
+                      <div className="p-2">
+                        <p className="text-sm font-semibold truncate">{dream.title}</p>
+                        <div className="flex items-center justify-between mt-1">
+                          <div className="flex items-center gap-1">
+                            <Avatar className="h-4 w-4">
+                              <AvatarImage src={dream.profiles?.avatar_url} />
+                              <AvatarFallback className="bg-dream-purple/20 text-[8px]">
+                                {dream.profiles?.username?.[0]?.toUpperCase() || "U"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-xs text-muted-foreground truncate max-w-[70px]">
+                              {dream.profiles?.display_name || dream.profiles?.username || "User"}
+                            </span>
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            {new Date(dream.created_at).toLocaleDateString()}
+                          </Badge>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Heart size={32} className="mx-auto mb-2 text-muted-foreground" />
+                <h3 className="text-lg font-medium mb-1">No liked dreams yet</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {isOwnProfile ? 
+                    "Explore the Lucid Repo to discover and like dreams" : 
+                    "This user hasn't liked any dreams yet"}
+                </p>
+                <Link to="/lucidrepo">
+                  <Button variant="outline">Explore Dreams</Button>
+                </Link>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
@@ -428,6 +754,80 @@ const Profile = () => {
               className="bg-gradient-to-r from-dream-lavender to-dream-purple"
             >
               Save Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Social Links Dialog */}
+      <Dialog open={isSocialLinksOpen} onOpenChange={setIsSocialLinksOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="gradient-text">Social Links</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="twitter" className="flex items-center gap-2">
+                <Twitter size={16} className="text-blue-400" />
+                Twitter Username
+              </Label>
+              <Input
+                id="twitter"
+                value={socialLinks.twitter}
+                onChange={(e) => setSocialLinks({...socialLinks, twitter: e.target.value})}
+                placeholder="username (without @)"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="instagram" className="flex items-center gap-2">
+                <Instagram size={16} className="text-pink-500" />
+                Instagram Username
+              </Label>
+              <Input
+                id="instagram"
+                value={socialLinks.instagram}
+                onChange={(e) => setSocialLinks({...socialLinks, instagram: e.target.value})}
+                placeholder="username"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="facebook" className="flex items-center gap-2">
+                <Facebook size={16} className="text-blue-600" />
+                Facebook Username
+              </Label>
+              <Input
+                id="facebook"
+                value={socialLinks.facebook}
+                onChange={(e) => setSocialLinks({...socialLinks, facebook: e.target.value})}
+                placeholder="username"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="website" className="flex items-center gap-2">
+                <Globe size={16} className="text-gray-600" />
+                Website URL
+              </Label>
+              <Input
+                id="website"
+                value={socialLinks.website}
+                onChange={(e) => setSocialLinks({...socialLinks, website: e.target.value})}
+                placeholder="https://yourwebsite.com"
+              />
+            </div>
+          </div>
+          
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsSocialLinksOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleUpdateSocialLinks}
+              className="bg-gradient-to-r from-dream-lavender to-dream-purple"
+            >
+              Save Links
             </Button>
           </div>
         </DialogContent>
