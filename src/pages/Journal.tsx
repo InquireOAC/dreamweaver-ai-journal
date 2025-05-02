@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -44,7 +43,9 @@ const Journal = () => {
   // Set daily quote based on the date
   useEffect(() => {
     const today = new Date();
-    const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
+    const startOfYear = new Date(today.getFullYear(), 0, 0);
+    const diff = Number(today) - Number(startOfYear);
+    const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
     const quoteIndex = dayOfYear % inspirationalDreamQuotes.length;
     setDailyQuote(inspirationalDreamQuotes[quoteIndex]);
   }, []);
