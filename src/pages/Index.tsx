@@ -1,8 +1,8 @@
 
-import Journal from "./Journal";
+import { Navigate } from "react-router-dom";
 
 const Index = () => {
-  return <Journal />;
+  return <Navigate to="/" replace />;
 };
 
 export default Index;

@@ -16,6 +16,9 @@ export type DreamEntry = {
   imagePrompt?: string;
   generatedImage?: string;
   analysis?: string;
+  isPublic?: boolean; // Whether dream is shared to Lucid Repo
+  likeCount?: number; // Number of likes
+  commentCount?: number; // Number of comments
 };
 
 export type DreamStore = {

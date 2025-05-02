@@ -1,20 +1,25 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DreamEntry, DreamTag } from "@/types/dream";
 import DreamAnalysis from "./DreamAnalysis";
 import DreamImageGenerator from "./DreamImageGenerator";
-import { Moon } from "lucide-react";
+import { Moon, Globe, Trash2, Lock } from "lucide-react";
 
 interface DreamDetailProps {
   dream: DreamEntry;
   tags: DreamTag[];
   onClose: () => void;
   onUpdate: (id: string, updates: Partial<DreamEntry>) => void;
+  onDelete: (id: string) => void;
+  isAuthenticated: boolean;
 }
 
 const DreamDetail = ({
@@ -22,6 +27,8 @@ const DreamDetail = ({
   tags,
   onClose,
   onUpdate,
+  onDelete,
+  isAuthenticated,
 }: DreamDetailProps) => {
   const formattedDate = format(new Date(dream.date), "EEEE, MMMM d, yyyy");
   const formattedTime = format(new Date(dream.date), "h:mm a");
@@ -29,6 +36,9 @@ const DreamDetail = ({
   const dreamTags = dream.tags
     .map((tagId) => tags.find((t) => t.id === tagId))
     .filter(Boolean) as DreamTag[];
+  
+  const [isPublic, setIsPublic] = useState(dream.isPublic || false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const handleAnalysisComplete = (analysis: string) => {
     onUpdate(dream.id, { analysis });
@@ -39,6 +49,16 @@ const DreamDetail = ({
       generatedImage: imageUrl,
       imagePrompt: prompt,
     });
+  };
+  
+  const handleShareToggle = (checked: boolean) => {
+    if (!isAuthenticated) {
+      // Show authentication message
+      return;
+    }
+    
+    setIsPublic(checked);
+    onUpdate(dream.id, { isPublic: checked });
   };
 
   return (
@@ -88,6 +108,45 @@ const DreamDetail = ({
             </p>
           </div>
           
+          {isAuthenticated && (
+            <>
+              <Separator />
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Switch 
+                    id="share-dream"
+                    checked={isPublic}
+                    onCheckedChange={handleShareToggle}
+                  />
+                  <Label htmlFor="share-dream" className="flex gap-1 items-center">
+                    {isPublic ? (
+                      <>
+                        <Globe size={16} className="text-dream-purple" />
+                        <span>Shared to Lucid Repo</span>
+                      </>
+                    ) : (
+                      <>
+                        <Lock size={16} />
+                        <span>Private</span>
+                      </>
+                    )}
+                  </Label>
+                </div>
+                
+                <Button
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setDeleteDialogOpen(true)}
+                  className="text-destructive border-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 size={14} className="mr-1" />
+                  Delete
+                </Button>
+              </div>
+            </>
+          )}
+          
           <Separator />
           
           <DreamAnalysis
@@ -105,16 +164,41 @@ const DreamDetail = ({
             onImageGenerated={handleImageGenerated}
           />
           
-          <div className="flex justify-end">
+          <DialogFooter>
             <Button
               variant="outline"
               onClick={onClose}
             >
               Close
             </Button>
-          </div>
+          </DialogFooter>
         </div>
       </DialogContent>
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this dream from your journal.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                onDelete(dream.id);
+                setDeleteDialogOpen(false);
+              }}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };

@@ -3,7 +3,7 @@ import React from "react";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Moon } from "lucide-react";
+import { Moon, Heart } from "lucide-react";
 import { DreamEntry, DreamTag } from "@/types/dream";
 
 interface DreamCardProps {
@@ -64,6 +64,14 @@ const DreamCard = ({ dream, tags, onClick }: DreamCardProps) => {
               alt="Dream visualization"
               className="h-full w-full object-cover"
             />
+          </div>
+        )}
+        
+        {/* Show like count if dream is public */}
+        {dream.isPublic && typeof dream.likeCount !== 'undefined' && (
+          <div className="mt-2 flex items-center text-xs text-muted-foreground">
+            <Heart size={12} className="mr-1" />
+            <span>{dream.likeCount || 0} likes</span>
           </div>
         )}
       </CardContent>
