@@ -5,13 +5,14 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import MainLayout from "./layouts/MainLayout";
 import Journal from "./pages/Journal";
 import LucidRepo from "./pages/LucidRepo";
 import Profile from "./pages/Profile";
+
+// Remove Index import as it's no longer needed since we set Journal as index route
 
 const queryClient = new QueryClient();
 

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { 
@@ -18,7 +17,6 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useNavigate, Link } from "react-router-dom";
 
 const Profile = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -858,7 +856,7 @@ const Profile = () => {
                   <span>3/10 used</span>
                 </div>
                 <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="bg-dream-purple h-full w-3/10" />
+                  <div className="bg-dream-purple h-full w-[30%]" />
                 </div>
               </div>
               
