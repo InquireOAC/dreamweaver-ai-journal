@@ -23,6 +23,9 @@ const DreamCard = ({ dream, tags, onClick }: DreamCardProps) => {
   
   // Use either likeCount or like_count, ensuring we have a consistent value
   const likeCount = typeof dream.likeCount !== 'undefined' ? dream.likeCount : (dream.like_count || 0);
+  
+  // Similarly handle comment count
+  const commentCount = typeof dream.commentCount !== 'undefined' ? dream.commentCount : (dream.comment_count || 0);
 
   return (
     <Card 
