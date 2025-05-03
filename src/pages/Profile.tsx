@@ -260,7 +260,15 @@ const Profile = () => {
         
         if (dreamError) throw dreamError;
         
-        setLikedDreams(dreamData || []);
+        // Map fields for consistency
+        const mappedData = dreamData?.map(dream => ({
+          ...dream,
+          isPublic: dream.is_public,
+          likeCount: dream.like_count || 0,
+          commentCount: dream.comment_count || 0
+        }));
+        
+        setLikedDreams(mappedData || []);
       } else {
         setLikedDreams([]);
       }

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -82,8 +83,11 @@ const Journal = () => {
           imagePrompt: dream.imagePrompt,
           generatedImage: dream.generatedImage,
           analysis: dream.analysis,
-          isPublic: dream.is_public || false,
+          is_public: dream.is_public || false,
+          isPublic: dream.is_public || false, // Sync both fields
+          like_count: dream.like_count || 0,
           likeCount: dream.like_count || 0,
+          comment_count: dream.comment_count || 0,
           commentCount: dream.comment_count || 0
         }));
         
@@ -153,7 +157,11 @@ const Journal = () => {
         // Handle special case for isPublic which maps to is_public in database
         if ('isPublic' in updates) {
           dbUpdates.is_public = updates.isPublic;
-          delete dbUpdates.isPublic;
+        }
+        
+        // Also ensure is_public updates isPublic
+        if ('is_public' in updates) {
+          updateEntry(id, { isPublic: updates.is_public });
         }
         
         const { error } = await supabase
@@ -165,7 +173,7 @@ const Journal = () => {
         if (error) throw error;
       }
       
-      if (updates.isPublic) {
+      if (updates.is_public || updates.isPublic) {
         toast.success("Dream shared to Lucid Repo!");
       }
     } catch (error) {
@@ -205,9 +213,6 @@ const Journal = () => {
           <Moon className="animate-float" />
           <span className="italic">{dailyQuote}</span>
         </h1>
-        <p className="text-muted-foreground">
-          Record and analyze your dreams with the help of AI
-        </p>
       </header>
 
       <div className="flex justify-between items-center mb-6">
@@ -256,7 +261,7 @@ const Journal = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {entries.map((dream) => (
                 <div key={dream.id} className="relative">
-                  {dream.isPublic && (
+                  {(dream.isPublic || dream.is_public) && (
                     <div className="absolute top-2 right-2 z-10">
                       <Badge className="bg-dream-purple text-white flex items-center gap-1">
                         <Globe size={12} /> Shared
@@ -280,7 +285,7 @@ const Journal = () => {
               .slice(0, 6)
               .map((dream) => (
                 <div key={dream.id} className="relative">
-                  {dream.isPublic && (
+                  {(dream.isPublic || dream.is_public) && (
                     <div className="absolute top-2 right-2 z-10">
                       <Badge className="bg-dream-purple text-white flex items-center gap-1">
                         <Globe size={12} /> Shared

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -36,8 +37,10 @@ const DreamDetail = ({
     .map((tagId) => tags.find((t) => t.id === tagId))
     .filter(Boolean) as DreamTag[];
   
-  const [isPublic, setIsPublic] = useState(dream.is_public || false);
+  // Use is_public for consistency with the database field
+  const [isPublic, setIsPublic] = useState(dream.is_public || dream.isPublic || false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleAnalysisComplete = (analysis: string) => {
     onUpdate(dream.id, { analysis });
@@ -52,12 +55,23 @@ const DreamDetail = ({
   
   const handleShareToggle = (checked: boolean) => {
     if (!isAuthenticated) {
-      // Show authentication message
       return;
     }
     
     setIsPublic(checked);
-    onUpdate(dream.id, { is_public: checked });
+    onUpdate(dream.id, { 
+      is_public: checked,
+      isPublic: checked // Update both fields for consistency
+    });
+  };
+
+  const handleDelete = () => {
+    setIsDeleting(true);
+    try {
+      onDelete(dream.id);
+    } finally {
+      setDeleteDialogOpen(false);
+    }
   };
 
   return (
@@ -138,6 +152,7 @@ const DreamDetail = ({
                   size="sm"
                   onClick={() => setDeleteDialogOpen(true)}
                   className="text-destructive border-destructive hover:bg-destructive/10"
+                  disabled={isDeleting}
                 >
                   <Trash2 size={14} className="mr-1" />
                   Delete
@@ -187,13 +202,11 @@ const DreamDetail = ({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={() => {
-                onDelete(dream.id);
-                setDeleteDialogOpen(false);
-              }}
+              onClick={handleDelete}
               className="bg-destructive hover:bg-destructive/90"
+              disabled={isDeleting}
             >
-              Delete
+              {isDeleting ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

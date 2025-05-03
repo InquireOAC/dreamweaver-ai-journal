@@ -184,6 +184,9 @@ const LucidRepo = () => {
             liked: !isLiked,
             like_count: isLiked 
               ? Math.max((dream.like_count || 1) - 1, 0)
+              : (dream.like_count || 0) + 1,
+            likeCount: isLiked 
+              ? Math.max((dream.like_count || 1) - 1, 0)
               : (dream.like_count || 0) + 1
           };
         }
@@ -428,7 +431,7 @@ const LucidRepo = () => {
                             size={18} 
                             className={dream.liked || userLikes.includes(dream.id) ? "fill-red-500 text-red-500" : ""} 
                           />
-                          <span className="text-xs">{dream.like_count || 0}</span>
+                          <span className="text-xs">{dream.likeCount || dream.like_count || 0}</span>
                         </Button>
                         
                         <Button
@@ -439,7 +442,7 @@ const LucidRepo = () => {
                         >
                           <MessageSquare size={18} />
                           <span className="text-xs">
-                            {dream.comment_count || 0}
+                            {dream.commentCount || dream.comment_count || 0}
                           </span>
                         </Button>
                       </div>

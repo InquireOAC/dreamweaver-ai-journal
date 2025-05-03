@@ -18,6 +18,9 @@ const DreamCard = ({ dream, tags, onClick }: DreamCardProps) => {
     .map((tagId) => tags.find((t) => t.id === tagId))
     .filter(Boolean) as DreamTag[];
 
+  // Check either isPublic or is_public field
+  const isPublic = dream.is_public || dream.isPublic;
+
   return (
     <Card 
       className="dream-card cursor-pointer hover:scale-[1.02] transition-all"
@@ -68,10 +71,10 @@ const DreamCard = ({ dream, tags, onClick }: DreamCardProps) => {
         )}
         
         {/* Show like count if dream is public */}
-        {dream.is_public && typeof dream.likeCount !== 'undefined' && (
+        {isPublic && (typeof dream.likeCount !== 'undefined' || typeof dream.like_count !== 'undefined') && (
           <div className="mt-2 flex items-center text-xs text-muted-foreground">
             <Heart size={12} className="mr-1" />
-            <span>{dream.likeCount || 0} likes</span>
+            <span>{dream.likeCount || dream.like_count || 0} likes</span>
           </div>
         )}
       </CardContent>
