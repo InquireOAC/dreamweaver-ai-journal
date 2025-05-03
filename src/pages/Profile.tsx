@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -223,8 +222,8 @@ const Profile = () => {
       const mappedData = data?.map(dream => ({
         ...dream,
         isPublic: dream.is_public,
-        likeCount: dream.like_count,
-        commentCount: dream.comment_count
+        likeCount: dream.like_count || 0,
+        commentCount: dream.comment_count || 0
       }));
       
       setPublicDreams(mappedData || []);

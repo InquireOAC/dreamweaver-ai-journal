@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -93,8 +94,8 @@ const LucidRepo = () => {
           ...dream,
           liked: userLikes.includes(dream.id),
           isPublic: dream.is_public,
-          likeCount: dream.like_count,
-          commentCount: dream.comment_count
+          likeCount: dream.like_count || 0,
+          commentCount: dream.comment_count || 0
         }));
         setDreams(updatedDreams);
         

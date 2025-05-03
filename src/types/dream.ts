@@ -18,10 +18,10 @@ export type DreamEntry = {
   analysis?: string;
   is_public?: boolean; // Whether dream is shared to Lucid Repo
   isPublic?: boolean; // Legacy field - keeping for backward compatibility
-  likeCount?: number; // Number of likes
   like_count?: number; // Supabase field name
-  commentCount?: number; // Number of comments
+  likeCount?: number; // App field name
   comment_count?: number; // Supabase field name
+  commentCount?: number; // App field name
 };
 
 export type DreamStore = {
