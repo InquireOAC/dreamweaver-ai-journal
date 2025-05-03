@@ -219,7 +219,15 @@ const Profile = () => {
       
       if (error) throw error;
       
-      setPublicDreams(data || []);
+      // Map Supabase field names to our app's field names for consistency
+      const mappedData = data?.map(dream => ({
+        ...dream,
+        isPublic: dream.is_public,
+        likeCount: dream.like_count,
+        commentCount: dream.comment_count
+      }));
+      
+      setPublicDreams(mappedData || []);
     } catch (error) {
       console.error("Error fetching public dreams:", error);
     }

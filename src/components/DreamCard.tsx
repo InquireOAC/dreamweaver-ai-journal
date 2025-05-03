@@ -68,7 +68,7 @@ const DreamCard = ({ dream, tags, onClick }: DreamCardProps) => {
         )}
         
         {/* Show like count if dream is public */}
-        {dream.isPublic && typeof dream.likeCount !== 'undefined' && (
+        {dream.is_public && typeof dream.likeCount !== 'undefined' && (
           <div className="mt-2 flex items-center text-xs text-muted-foreground">
             <Heart size={12} className="mr-1" />
             <span>{dream.likeCount || 0} likes</span>

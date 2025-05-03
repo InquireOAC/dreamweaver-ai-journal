@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -37,7 +36,7 @@ const DreamDetail = ({
     .map((tagId) => tags.find((t) => t.id === tagId))
     .filter(Boolean) as DreamTag[];
   
-  const [isPublic, setIsPublic] = useState(dream.isPublic || false);
+  const [isPublic, setIsPublic] = useState(dream.is_public || false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const handleAnalysisComplete = (analysis: string) => {
@@ -58,7 +57,7 @@ const DreamDetail = ({
     }
     
     setIsPublic(checked);
-    onUpdate(dream.id, { isPublic: checked });
+    onUpdate(dream.id, { is_public: checked });
   };
 
   return (

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -89,10 +88,13 @@ const LucidRepo = () => {
       if (error) throw error;
       
       if (data && data.length > 0) {
-        // Update dreams with liked status
+        // Update dreams with liked status and map field names for consistency
         const updatedDreams = data.map(dream => ({
           ...dream,
-          liked: userLikes.includes(dream.id)
+          liked: userLikes.includes(dream.id),
+          isPublic: dream.is_public,
+          likeCount: dream.like_count,
+          commentCount: dream.comment_count
         }));
         setDreams(updatedDreams);
         

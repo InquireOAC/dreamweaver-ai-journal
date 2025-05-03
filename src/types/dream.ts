@@ -16,9 +16,12 @@ export type DreamEntry = {
   imagePrompt?: string;
   generatedImage?: string;
   analysis?: string;
-  isPublic?: boolean; // Whether dream is shared to Lucid Repo
+  is_public?: boolean; // Whether dream is shared to Lucid Repo
+  isPublic?: boolean; // Legacy field - keeping for backward compatibility
   likeCount?: number; // Number of likes
+  like_count?: number; // Supabase field name
   commentCount?: number; // Number of comments
+  comment_count?: number; // Supabase field name
 };
 
 export type DreamStore = {
