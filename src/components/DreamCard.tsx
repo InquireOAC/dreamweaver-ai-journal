@@ -20,6 +20,9 @@ const DreamCard = ({ dream, tags, onClick }: DreamCardProps) => {
 
   // Check either isPublic or is_public field
   const isPublic = dream.is_public || dream.isPublic;
+  
+  // Use either likeCount or like_count, ensuring we have a consistent value
+  const likeCount = typeof dream.likeCount !== 'undefined' ? dream.likeCount : (dream.like_count || 0);
 
   return (
     <Card 
@@ -71,10 +74,10 @@ const DreamCard = ({ dream, tags, onClick }: DreamCardProps) => {
         )}
         
         {/* Show like count if dream is public */}
-        {isPublic && (typeof dream.likeCount !== 'undefined' || typeof dream.like_count !== 'undefined') && (
+        {isPublic && (
           <div className="mt-2 flex items-center text-xs text-muted-foreground">
             <Heart size={12} className="mr-1" />
-            <span>{dream.likeCount || dream.like_count || 0} likes</span>
+            <span>{likeCount} likes</span>
           </div>
         )}
       </CardContent>
