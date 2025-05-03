@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { DreamEntry } from "@/types/dream";
 
 // Import refactored components
 import ProfileHeader from "@/components/profile/ProfileHeader";
@@ -44,8 +45,8 @@ const Profile = () => {
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   
-  const [publicDreams, setPublicDreams] = useState<any[]>([]);
-  const [likedDreams, setLikedDreams] = useState<any[]>([]);
+  const [publicDreams, setPublicDreams] = useState<DreamEntry[]>([]);
+  const [likedDreams, setLikedDreams] = useState<DreamEntry[]>([]);
   const [conversations, setConversations] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   

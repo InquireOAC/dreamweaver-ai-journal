@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -13,13 +14,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import DreamComments from "@/components/DreamComments";
+import { DreamEntry } from "@/types/dream";
 
 const LucidRepo = () => {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   
   const [feedType, setFeedType] = useState<"public" | "following">("public");
-  const [dreams, setDreams] = useState<any[]>([]);
+  const [dreams, setDreams] = useState<DreamEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [userProfiles, setUserProfiles] = useState<{[key: string]: any}>({});
   const [activeDream, setActiveDream] = useState<string | null>(null);

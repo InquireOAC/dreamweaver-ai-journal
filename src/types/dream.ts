@@ -22,6 +22,17 @@ export type DreamEntry = {
   likeCount?: number; // App field name
   comment_count?: number; // Supabase field name
   commentCount?: number; // App field name
+  created_at?: string; // Added for Supabase timestamp
+  updated_at?: string; // Added for Supabase timestamp
+  user_id?: string; // Added for Supabase user ID
+  view_count?: number; // Added for Supabase view count
+  // Add profiles field for joined queries
+  profiles?: {
+    username?: string;
+    display_name?: string;
+    avatar_url?: string;
+    [key: string]: any;
+  };
 };
 
 export type DreamStore = {
